@@ -10,7 +10,7 @@ The purpose of Ethernet multicast is to allow a single Ethernet frame to be forw
 Ethernet denotes unicast frames from multicast frames by the individual/group (I/G) bit in the first byte of the Ethernet destination address (MAC address). If the I/G bit is set to one, the frame is marked for multicast processing (flooding). You can easily distinguish multicast frames from unicast frames: if the first byte of the destination MAC address is an even number then it is a unicast frame. If it’s an odd number then it’s a multicast frame. Setting the I/G bit within a source MAC address is not allowed according to the Ethernet standards.
 
 
-![individual group bit](individual-group-bit.png?raw=true)
+![individual group bit](images/individual-group-bit.png?raw=true)
 
 
 What about an Ethernet broadcast? A broadcast is a multicast, it is handled exactly the same as multicast by the Ethernet network. It is flooded throughout the Ethernet (broadcast) domain. The difference is at host side. All hosts must listen to broadcast frames (the network stack is programmed to always forward broadcasts into the hosts upper layers for processing). A broadcast is a multicast targeted to all hosts in the Ethernet (broadcast) domain. A broadcast frame is send to the reserved destination MAC address FF-FF-FF-FF-FF-FF.
@@ -45,7 +45,7 @@ IP multicast addresses:
 -----------------------
 The Internet Assigned Number Authority (IANA) assigned the class D address space for IP multicast use. The class D range represents IP multicast addresses ranging from 224.0.0.0 through 239.255.255.255.
 
-![IP class D](Class-D.png?raw=true)
+![IP class D](images/Class-D.png?raw=true)
 
 As you can see class D addresses start with the binary prefix 1110 which leaves room for 28^2 multicast addresses.
 
@@ -82,7 +82,7 @@ In IP multicast the IP multicast (group) address is encoded within the MAC addre
 
 The following figure shows how the IP multicast address is encoded within the multicast MAC address:
 
-![IP Multicast Ethernet mapping](IP-Multicast-Ethernet-mapping.png?raw=true)
+![IP Multicast Ethernet mapping](images/IP-Multicast-Ethernet-mapping.png?raw=true)
 
 If you search the IEEE OUI database for 00-00-5E you will see that this range was registered by the IANA. As described the IEEE assigns next to the 00-00-5E prefix the 01-00-5E prefix for multicast. The first 25 bits of the MAC address are fixed (represented by the red boxes). IANA reserved half of the 01-00-5E multicast range for IP multicast. More specific: 01-00-5E-00-00-00 through 01-00-5E-7F-FF-FF. That is why only 23 bits can be mapped from the IP address (represented by the green boxes and arrows) not 24.
 
