@@ -1,7 +1,7 @@
 Ethernet multicast versus IP multicast:
 =====================================================
 
-A network administrator should understand multicast. Mostly when we talk multicast, IP (layer 3) multicast in meant and Ethernet (layer 2) multicast is taken for granted. But a clear distinction between the two has to be made. They work very different and IP multicast is essentially an application on top of Ethernet multicast. This article tries to describe their properties and how they relate. During you next multicast discussion (if not obvious) you should ask: do you mean Ethernet or IP multicast? 
+A network administrator should understand multicast. Mostly when we talk multicast, IP (layer 3) multicast in meant and Ethernet (layer 2) multicast is taken for granted. But a clear distinction between the two has to be made. They work very different and IP multicast is essentially an application on top of Ethernet multicast. This article tries to describe their properties and how they relate. During your next multicast discussion (if not obvious) you should ask: do you mean Ethernet or IP multicast? 
 
 Ethernet multicast:
 -------------------
@@ -55,8 +55,8 @@ The class D multicast range is further subdivided in scopes, these scopes are im
 * Global scope: 224.0.1.0 – 238.255.255.255
 * Administrative scope: 239.0.0.0 – 239.255.255.255
 
-Link scoped (link-local) multicast addresses (224.0.0.0 – 224.0.0.255):
------------------------------------------------------------------------
+#### Link scoped (link-local) multicast addresses (224.0.0.0 – 224.0.0.255):
+
 This range is reserved for use by network protocols. Link scoped IP multicast packets will never be forwarded from the local Ethernet segment by a (multicast) router. Also, link scoped packets will always be flooded throughout the Ethernet broadcast domain. IGMP snooping will not affect flooding. 
 
 The following list shows some examples of well-known link-local multicast addresses:
@@ -66,12 +66,12 @@ The following list shows some examples of well-known link-local multicast addres
 * 224.0.0.4 DVMRP
 * 224.0.0.5 All OSPF Routers
 
-Globally scoped multicast addresses (224.0.1.0 – 238.255.255.255):
-------------------------------------------------------------------
+#### Globally scoped multicast addresses (224.0.1.0 – 238.255.255.255):
+
 Global scoped multicast IP addresses are meant for global use (public use). Forwarding of Globally scoped multicast packets in an Ethernet network is affected by IGMP snooping.
 
-Administratively scoped multicast addresses (239.0.0.0 – 239.255.255.255):
---------------------------------------------------------------------------
+#### Administratively scoped multicast addresses (239.0.0.0 – 239.255.255.255):
+
 These multicast addresses can be used privately (RFC 2365), the idea is the same as private IP addressing described in RFC 1918. Just like global scoped addresses forwarding of these packets in an Ethernet network are affected by IGMP snooping.
 
 IP multicast address to Ethernet address mapping:
@@ -90,5 +90,44 @@ Class D IP addresses start with 1110 (purple boxes) this leaves 28 bits for mult
 
 Because of the budget problem there is 5 bit translation error (the blue boxes. For this reason a single multicast MAC address maps to 2^5 (32) different multicast IP addresses. If there are more multicast groups active on the same VLAN that map to the same MAC address the host CPU will be interrupted unnecessary for multicast packets it did not subscribe to. The host will simply discard the received packets with IP multicast addresses it did not subscribe to.
 
+IGMP snooping:
+--------------
+The goal of IGMP snooping is to forward IP multicast packets only to interested receivers. The required information is snooped from IGMP protocol packets. Without IGMP snooping enabled, IP based multicast traffic would be simply flooded. With IGMP snooping enabled multicast packets with a multicast group address within the following ranges will be only sent towards interested receivers:
 
+* Global scope: 224.0.1.0 – 238.255.255.255
+* Administrative scope: 239.0.0.0 – 239.255.255.255
+
+This article will not explain how IGMP works, this article shows how IGMP snooping controls the delivery of IP multicast packets in an IGMP snooping enabled Ethernet network.
+
+Multicast router and group member interfaces:
+---------------------------------------------
+The IGMP snooping process running within an Ethernet switch builds an IGMP snooping table. This table contains information about multicast router and group member interfaces. Multicast router interface entries describe the switch interfaces leading towards a PIM router or IGMP querier. This information is snooped from IGMP queries and/or PIM updates. Group member interface entries describe the switch interfaces leading towards interested multicast receivers. This information is snooped from IGMP membership reports, unsolicited IGMP joins and leave massages. It is crucial to have an IGMP querier (or PIM router which executes the IGMP queries) running in an IGMP snooping enabled network. Without the querier, hosts will not send membership reports and the snooping table cannot be build (or will time out). The result is that, in an IGMP snooping enabled network, packets addressed within the global scope and administrative scope will be dropped.
+
+#### Formation of multicast router interfaces:
+
+The following figure shows the formation of multicast router interfaces (the red crosses are STP blocked ports). The IGMP querier executes regular IGMP queries. The IGMP query destination address is 224.0.0.1, as described in the previous post multicast packets addressed to 224.0.0.x/24 are always flooded, IGMP snooping does not affect the 224.0.0.x/24 range.
+
+![Multicast router interfaces](images/Multicast-router-interfaces.png?raw=true)
+
+All switch ports where flooded IGMP queries are snooped are listed as multicast router interfaces in the snooping table (purple marked interfaces).
+
+#### Formation of multicast group member interfaces:
+
+Interested hosts will respond with IGMP membership reports to the IGMP queries. Membership reports are forwarded via the multicast router interfaces towards the IGMP querier. The following figure shows the result of this process. The group member interfaces are marked green.
+
+![multicast group member interfaces](images/multicast-group-member-interfaces.png?raw=true)
+
+A forwarding path between the IGMP querier and the multicast receiver emerges. This doesn’t mean that the multicast traffic must be originated by the IGMP querier (PIM router). Multicast sources can be everywhere in the network, in the layer 2 domain or behind a PIM router.
+
+#### Multicast traffic flow in an IGMP enabled network:
+
+It’s important to understand that a multicast source plays no role in the described formation process. A multicast source just starts sending multicast traffic. It is the responsibility of the network to deliver the multicast packets to the interested receivers.
+
+![multicast traffic flow registered and unregistered](images/multicast-traffic-flow-registered-and-unregistered.png?raw=true)
+
+The figure shows the stream of packets (in red) originated by the multicast source (assuming the receiver showed interest via membership reports in the multicast group of the source). To understand the flow we must distinguish between registered and unregistered multicast packets.
+
+Registered multicast packets are packets for which the multicast group address is listed in the IGMP snooping table (there is interest in this multicast stream).
+Unregistered multicast packets are packets for which the multicast group address is not listed in the IGMP snooping table (there is no interest in this multicast stream).
+A registered multicast packet is forwarded out of every multicast router interface and every interested multicast group member interface. An unregistered multicast packet is only forwarded to the multicast group interfaces. As you can see multicast frames are always send to the IGMP querier / PIM router. This enables the PIM router to learn about available multicast sources which then can be advertised throughout the PIM routed domain.
 
